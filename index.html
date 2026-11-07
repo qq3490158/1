@@ -521,9 +521,9 @@ function locateMe() {
     pos => { moveTo(pos.coords.latitude, pos.coords.longitude, 16); toast('已获取当前位置'); },
     err => {
       const code = err && err.code;
-      if (code === 1) locateFromModule();
-      else if (code === 2) toast('定位失败: 无法获取当前位置，请检查系统定位服务是否开启', 4000);
-      else if (code === 3) toast('定位超时，请重试', 3000);
+      // 1=权限被拒 2=位置不可用 3=超时：全部回退到模块里已存的坐标，
+      // 避免 iOS 定位服务/权限异常时“当前位置”按钮直接不可用。
+      if (code === 1 || code === 2 || code === 3) locateFromModule();
       else toast('定位失败: ' + (err && err.message ? err.message : '未知错误'), 3000);
     },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -536,7 +536,7 @@ function locateFromModule() {
     .then(d => {
       if (d.success && d.longitude && d.latitude) {
         moveTo(parseFloat(d.latitude), parseFloat(d.longitude), 16);
-        toast('已获取当前位置');
+        toast('已定位到设备已存坐标');
       } else {
         toast('无法获取当前位置，请先储存一个位置或开启定位模块', 4000);
       }
