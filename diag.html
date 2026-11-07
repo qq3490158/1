@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>wloc 诊断</title>
+<style>
+body{margin:0;padding:16px;font:14px/1.6 -apple-system,system-ui,"PingFang SC",sans-serif;background:#0f1115;color:#e9edf3}
+h1{font-size:17px;margin:0 0 12px}
+.row{background:#181c24;border:1px solid #262c38;border-radius:12px;padding:10px 12px;margin-bottom:10px;white-space:pre-wrap;word-break:break-all}
+.k{color:#7fe3ea;font-weight:600}
+.ok{color:#34d399}.bad{color:#ff6b6b}.warn{color:#f5a623}
+button{width:100%;padding:14px;border:0;border-radius:12px;background:#17c3cf;color:#062226;font-size:15px;font-weight:700;margin-bottom:12px}
+.meta{font-size:11px;color:#8a93a5}
+</style>
+</head>
+<body>
+<h1>wloc 诊断页</h1>
+<button onclick="run()">重新检测</button>
+<div id="meta" class="row meta"></div>
+<div id="out"></div>
+<script>
+var API = 'https://gs-loc.apple.com/ils-settings/save';
+var out = document.getElementById('out');
+function add(k, v, cls) {
+  var d = document.createElement('div');
+  d.className = 'row';
+  d.innerHTML = '<span class="k">' + k + '</span>\n<span class="' + (cls || '') + '">' + String(v).replace(/[<>&]/g, function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c]}) + '</span>';
+  out.appendChild(d);
+}
+function url(tag) { return API + '?action=query&_=' + tag + Date.now(); }
+
+async function run() {
+  out.innerHTML = '';
+  document.getElementById('meta').textContent =
+    'time: ' + new Date().toISOString() + '\n' +
+    'origin: ' + location.origin + '\n' +
+    'secure: ' + window.isSecureContext + '\n' +
+    'ua: ' + navigator.userAgent;
+  add('开始', '检测中...');
+
+  // A. 普通 CORS fetch（选点页用的就是这一种）
+  try {
+    var r = await fetch(url('cors'), { method: 'GET', mode: 'cors', cache: 'no-store' });
+    var t = await r.text();
+    add('A. fetch(cors)', 'status=' + r.status + '\ncontent-type=' + r.headers.get('content-type') +
+        '\nACAO=' + r.headers.get('access-control-allow-origin') + '\nbody=' + t.slice(0, 200), 'ok');
+  } catch (e) {
+    add('A. fetch(cors)', '✗ ' + e.name + ': ' + e.message, 'bad');
+  }
+
+  // B. no-cors fetch：只验证网络能不能通，不验证 CORS
+  try {
+    var r2 = await fetch(url('nocors'), { method: 'GET', mode: 'no-cors', cache: 'no-store' });
+    add('B. fetch(no-cors)', '✓ 请求成功 type=' + r2.type + '（能通，说明问题在 CORS 响应头）', 'ok');
+  } catch (e2) {
+    add('B. fetch(no-cors)', '✗ ' + e2.name + ': ' + e2.message + '（请求本身不通）', 'bad');
+  }
+
+  // C. XHR
+  await new Promise(function (resolve) {
+    var x = new XMLHttpRequest();
+    x.open('GET', url('xhr'));
+    x.onload = function () {
+      add('C. XHR', 'status=' + x.status + '\nACAO=' + (x.getResponseHeader('access-control-allow-origin')) +
+          '\nbody=' + String(x.responseText).slice(0, 200), x.status ? 'ok' : 'bad');
+      resolve();
+    };
+    x.onerror = function () { add('C. XHR', '✗ onerror status=' + x.status, 'bad'); resolve(); };
+    x.send();
+  });
+
+  // D. <img> 探针：不受 CORS 限制
+  await new Promise(function (resolve) {
+    var img = new Image();
+    img.onload = function () { add('D. img 探针', '✓ onload（HTTP 请求成功）', 'ok'); resolve(); };
+    img.onerror = function () { add('D. img 探针', '✗ onerror', 'bad'); resolve(); };
+    img.src = url('img');
+    setTimeout(function(){ resolve(); }, 8000);
+  });
+
+  add('结论', 'A 成功 → 页面可直接使用\nA 失败 + B 成功 → CORS 响应头没通过，需要改拦截脚本\nA、B 都失败 → 请求没走到模块（MITM/路由/证书）');
+}
+run();
+</script>
+</body>
+</html>
