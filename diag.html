@@ -10,17 +10,21 @@ h1{font-size:17px;margin:0 0 12px}
 .row{background:#181c24;border:1px solid #262c38;border-radius:12px;padding:10px 12px;margin-bottom:10px;white-space:pre-wrap;word-break:break-all}
 .k{color:#7fe3ea;font-weight:600}
 .ok{color:#34d399}.bad{color:#ff6b6b}.warn{color:#f5a623}
-button{width:100%;padding:14px;border:0;border-radius:12px;background:#17c3cf;color:#062226;font-size:15px;font-weight:700;margin-bottom:12px}
+button{width:100%;padding:14px;border:0;border-radius:12px;background:#17c3cf;color:#062226;font-size:15px;font-weight:700;margin-bottom:10px}
+button.alt{background:#2a3340;color:#e9edf3}
 .meta{font-size:11px;color:#8a93a5}
 </style>
 </head>
 <body>
 <h1>wloc 诊断页</h1>
-<button onclick="run()">重新检测</button>
+<button onclick="run()">重新检测 A/B/C/E</button>
+<button class="alt" onclick="mark(999)">② 拦截测试：把精度标记成 999</button>
+<button class="alt" onclick="mark(39)">③ 还原：精度改回 39</button>
 <div id="meta" class="row meta"></div>
 <div id="out"></div>
 <script>
 var API = 'https://gs-loc.apple.com/ils-settings/save';
+var LAT = 30.513168, LON = 117.031338, ALT = 45;
 var out = document.getElementById('out');
 function add(k, v, cls) {
   var d = document.createElement('div');
@@ -35,7 +39,6 @@ async function run() {
   document.getElementById('meta').textContent =
     'time: ' + new Date().toISOString() + '\n' +
     'origin: ' + location.origin + '\n' +
-    'secure: ' + window.isSecureContext + '\n' +
     'ua: ' + navigator.userAgent;
   add('开始', '检测中...');
 
@@ -70,16 +73,25 @@ async function run() {
     x.send();
   });
 
-  // D. <img> 探针：不受 CORS 限制
-  await new Promise(function (resolve) {
-    var img = new Image();
-    img.onload = function () { add('D. img 探针', '✓ onload（HTTP 请求成功）', 'ok'); resolve(); };
-    img.onerror = function () { add('D. img 探针', '✗ onerror', 'bad'); resolve(); };
-    img.src = url('img');
-    setTimeout(function(){ resolve(); }, 8000);
-  });
+  // E. 对照组：已知支持 CORS 的第三方接口，验证 Safari 本身跨域正常
+  try {
+    var r3 = await fetch('https://api.open-meteo.com/v1/elevation?latitude=30.5&longitude=117.0&_=' + Date.now(), { cache: 'no-store' });
+    var j = await r3.json();
+    add('E. 对照 CORS(open-meteo)', '✓ status=' + r3.status + ' body=' + JSON.stringify(j).slice(0, 120) + '（Safari 跨域本身正常）', 'ok');
+  } catch (e3) {
+    add('E. 对照 CORS(open-meteo)', '✗ ' + e3.name + ': ' + e3.message + '（可能是该接口在本地网络不可达）', 'bad');
+  }
 
-  add('结论', 'A 成功 → 页面可直接使用\nA 失败 + B 成功 → CORS 响应头没通过，需要改拦截脚本\nA、B 都失败 → 请求没走到模块（MITM/路由/证书）');
+  add('结论', 'A 成功 → 页面可直接使用\nA 失败 + E 成功 → Safari 跨域正常，是模块响应头没透传\nA、B 都失败 → 请求没走到模块（MITM/路由/证书）');
+}
+
+// 标记测试：no-cors 写一个特殊精度值。浏览器读不到响应，但模块脚本照样会执行。
+function mark(hacc) {
+  var u = API + '?lon=' + LON + '&lat=' + LAT + '&alt=' + ALT +
+          '&hacc=' + hacc + '&vacc=1000&randomRadius=0&_=' + Date.now();
+  fetch(u, { method: 'GET', mode: 'no-cors', cache: 'no-store' }).then(function () {
+    alert('已发送标记 hacc=' + hacc + '\n\n现在在 Safari 打开：\nhttps://gs-loc.apple.com/ils-settings/save?action=query\n\n看 horizontalAccuracy 是不是 ' + hacc);
+  }).catch(function (e) { alert('发送失败: ' + e.message); });
 }
 run();
 </script>
