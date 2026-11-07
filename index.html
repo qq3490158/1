@@ -87,8 +87,8 @@ body{min-height:100vh;-webkit-user-select:none;user-select:none;-webkit-touch-ca
 <div class="map-wrap">
 <div id="map"></div>
 <div class="layer-switch">
-  <button class="layer-btn active" data-layer="satellite" onclick="switchLayer('satellite')">卫星</button>
-  <button class="layer-btn" data-layer="amap" onclick="switchLayer('amap')" title="高德为偏移图源，选点已自动换算">高德</button>
+  <button class="layer-btn" data-layer="satellite" onclick="switchLayer('satellite')">卫星</button>
+  <button class="layer-btn active" data-layer="amap" onclick="switchLayer('amap')" title="高德为偏移图源，选点已自动换算">高德</button>
   <button class="layer-btn" data-layer="voyager" onclick="switchLayer('voyager')">彩色</button>
   <button class="layer-btn" data-layer="standard" onclick="switchLayer('standard')">标准</button>
   <button class="layer-btn" data-layer="dark" onclick="switchLayer('dark')">暗色</button>
@@ -248,7 +248,7 @@ const WRITE_HACC = 39, WRITE_VACC = 1000, WRITE_JITTER = 0;
 let lat = 30.503610, lon = 117.049305;
 let selected = false;
 let activeLon = null, activeLat = null;
-let layerIsGcj = false;
+let layerIsGcj = true;
 
 /* ---- 海拔: 后台静默查询, 只随写入请求发出, 界面不显示 ----
    Open-Meteo 偶尔要 2 秒以上, 所以结果按坐标缓存, 常用地点第二次就是瞬时的。 */
@@ -291,7 +291,7 @@ function fetchElev(la, lo) {
 function toDisplay(la, lo) { return layerIsGcj ? wgs84ToGcj02(la, lo) : { lat: la, lon: lo }; }
 function fromDisplay(la, lo) { return layerIsGcj ? gcj02ToWgs84(la, lo) : { lat: la, lon: lo }; }
 
-const map = L.map('map', { attributionControl: false }).setView([lat, lon], 13);
+const map = L.map('map', { attributionControl: false }).setView([toDisplay(lat, lon).lat, toDisplay(lat, lon).lon], 13);
 const tiles = {
   satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, attribution:'ArcGIS'}),
   wgs84: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, attribution:'ArcGIS WGS84'}),
@@ -300,7 +300,7 @@ const tiles = {
   amap: L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {maxZoom:18, subdomains:'1234', attribution:'© 高德'}),
   voyager: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom:19, attribution:'© Carto'})
 };
-let currentLayer = tiles.satellite;
+let currentLayer = tiles.amap;
 currentLayer.addTo(map);
 function switchLayer(name) {
   map.removeLayer(currentLayer);
@@ -312,7 +312,7 @@ function switchLayer(name) {
   map.setView([d.lat, d.lon], map.getZoom());
   document.querySelectorAll('.layer-btn').forEach(b => b.classList.toggle('active', b.dataset.layer === name));
 }
-let marker = L.marker([lat, lon], {draggable:true}).addTo(map);
+let marker = L.marker([toDisplay(lat, lon).lat, toDisplay(lat, lon).lon], {draggable:true}).addTo(map);
 marker.on('dragend', e => { const p=e.target.getLatLng(); setPosFromDisplay(p.lat, p.lng); });
 map.on('click', e => { setPosFromDisplay(e.latlng.lat, e.latlng.lng); });
 
