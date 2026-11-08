@@ -1,16 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1F6BFF"/>
-      <stop offset="100%" stop-color="#00C4D6"/>
-    </linearGradient>
-  </defs>
-  <rect width="1024" height="1024" fill="url(#bg)"/>
-  <g stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2">
-    <path d="M0 256 H1024"/><path d="M0 512 H1024"/><path d="M0 768 H1024"/>
-    <path d="M256 0 V1024"/><path d="M512 0 V1024"/><path d="M768 0 V1024"/>
-  </g>
-  <path d="M512 856 C 316 570 316 500 316 392 A 196 196 0 1 1 708 392 C 708 500 708 570 512 856 Z"
-        fill="#FFFFFF"/>
-  <circle cx="512" cy="392" r="80" fill="#0E8FE0"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E9BFF"/><stop offset="1" stop-color="#0A66FF"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#g)"/><path fill="#fff" d="M256 120a96 96 0 0 0-96 96c0 66 96 176 96 176s96-110 96-176a96 96 0 0 0-96-96z"/><circle cx="256" cy="216" r="40" fill="#0A66FF"/></svg>
