@@ -660,10 +660,22 @@ async function save() {
   }
 }
 
-// 当前位置: 统一读取设备上模块已存的坐标，保证所有域名/所有入口显示一致
+// 当前位置: 取设备真实定位（不走模块回退，避免不同域名拿到不同数据）
 function locateMe() {
   toast('获取位置中...');
-  locateFromModule();
+  const geo = navigator.geolocation;
+  if (!geo) { toast('此浏览器不支持定位', 3000); return; }
+  geo.getCurrentPosition(
+    pos => { moveTo(pos.coords.latitude, pos.coords.longitude, 16); toast('已获取当前位置'); },
+    err => {
+      const code = err && err.code;
+      if (code === 1) toast('定位权限被拒：设置 → Safari 浏览器 → 位置，改成“允许”', 6000);
+      else if (code === 2) toast('位置不可用：请打开系统“定位服务”', 5000);
+      else if (code === 3) toast('定位超时，请再点一次', 4000);
+      else toast('定位失败: ' + (err && err.message ? err.message : '未知错误'), 3000);
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
 }
 // 回退: 读取模块当前生效坐标作为当前位置(IP 估算会定位到代理出口, 不可靠, 已弃用)
 function locateFromModule() {
