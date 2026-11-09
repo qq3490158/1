@@ -660,22 +660,10 @@ async function save() {
   }
 }
 
-// 当前位置: 浏览器定位; 被拒时回退到模块坐标查询
+// 当前位置: 统一读取设备上模块已存的坐标，保证所有域名/所有入口显示一致
 function locateMe() {
   toast('获取位置中...');
-  const geo = navigator.geolocation;
-  if (!geo) { locateFromModule(); return; }
-  geo.getCurrentPosition(
-    pos => { moveTo(pos.coords.latitude, pos.coords.longitude, 16); toast('已获取当前位置'); },
-    err => {
-      const code = err && err.code;
-      // 1=权限被拒 2=位置不可用 3=超时：全部回退到模块里已存的坐标，
-      // 避免 iOS 定位服务/权限异常时“当前位置”按钮直接不可用。
-      if (code === 1 || code === 2 || code === 3) locateFromModule();
-      else toast('定位失败: ' + (err && err.message ? err.message : '未知错误'), 3000);
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-  );
+  locateFromModule();
 }
 // 回退: 读取模块当前生效坐标作为当前位置(IP 估算会定位到代理出口, 不可靠, 已弃用)
 function locateFromModule() {
